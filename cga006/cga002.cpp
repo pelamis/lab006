@@ -216,14 +216,14 @@ static void keyboard_callback(GLFWwindow* window, int key, int scancode, int act
 		{
 			l0.e = 1;
 			//kenny.Normal();
-			glEnable(GL_LIGHTING);
-			glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
-			glEnable(GL_LIGHT0);
+			l0.Enable();
 		}
 		else {
 			l0.e = 0;
-			glDisable(GL_LIGHT0);
+			glDisable(GL_NORMALIZE);
 			glDisable(GL_LIGHTING);
+			glDisable(GL_LIGHT0);
+			
 		}
 	}
 	if ((key == GLFW_KEY_M) && (action == GLFW_PRESS))
@@ -241,8 +241,8 @@ static void error_callback(int error, const char* description)
 void draw()
 {
 	GLdouble side = (A<C ? A : C) / 2;
-	l0.Enable();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//l0.Enable();
 	kenny.resize(A * 2, C);
 	glPushMatrix();
 	glLoadIdentity();
@@ -520,22 +520,27 @@ void Light::SetLightConf(GLfloat *a, GLfloat *d, GLfloat *s, GLfloat k_c, GLfloa
 }
 
 void Light::Enable() {
-	glMaterialfv(GL_FRONT, GL_AMBIENT, ma);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, md);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, ms);
-	glMaterialfv(GL_FRONT, GL_SHININESS, shine);
-	glColor3fv(RGB);
 	glEnable(GL_NORMALIZE);
+	glEnable(GL_LIGHTING);
+	glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
 
-	glLightfv(GL_LIGHT0, GL_POSITION, position);
-	glLightfv(GL_LIGHT0, GL_SPOT_CUTOFF, &cutoff);
+	glLightModelfv(GL_AMBIENT, ascene);
+//	glColor3fv(RGB);
+	
+	glEnable(GL_LIGHT0);
 
 	glLightfv(GL_LIGHT0, GL_AMBIENT, amb);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, diff);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, spec);
-	glLightfv(GL_LIGHT0, GL_CONSTANT_ATTENUATION, &kc);
-	glLightfv(GL_LIGHT0, GL_LINEAR_ATTENUATION, &kl);
-	glLightfv(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, &kq);
+	glLightfv(GL_LIGHT0, GL_POSITION, position);
+//	glLightfv(GL_LIGHT0, GL_CONSTANT_ATTENUATION, &kc);
+//	glLightfv(GL_LIGHT0, GL_LINEAR_ATTENUATION, &kl);
+//	glLightfv(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, &kq);
 
-	glLightModelfv(GL_AMBIENT, ascene);
+	glMaterialfv(GL_FRONT, GL_AMBIENT, ma);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, md);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, ms);
+//	glMaterialfv(GL_FRONT, GL_SHININESS, shine);
+	glLightfv(GL_LIGHT0, GL_SPOT_CUTOFF, &cutoff);
+	
 }
