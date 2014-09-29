@@ -40,7 +40,7 @@ d0[4] = { 1, 1, 1, 1 },
 s0[4] = { 1, 1, 1, 1 },
 sd0[3] = { 0, 0, -1 },
 c0 = M_PI,
-e0 = 0, kc = 0.01, kl = 0, kq = 0.0;
+e0 = 0, kc = 0.5, kl = 0.5, kq = 0.5;
 
 typedef struct Point
 {
@@ -48,6 +48,10 @@ typedef struct Point
 	GLdouble	y;
 	GLdouble	z;
 	GLdouble	RGB[3];
+	void operator = (const Point b) { x = b.x; y = b.y; z = b.z; }
+	Point operator * (double k) { Point a; a.x = x * k; a.y = y * k; a.z = z * k; return a; }
+	Point operator + (const Point b) { x += b.x; y += b.y; z += b.z; return *this; }
+	Point operator - (const Point b) { x -= b.x; y -= b.y; z -= b.z; return *this; }
 } GLdoublePoint;
 
 typedef struct Edge
@@ -55,19 +59,27 @@ typedef struct Edge
 	GLdoublePoint v1, v2;
 }Edge;
 
-typedef struct Triangle
+typedef struct Vector
 {
+	GLdouble x, y, z;
+}Vector;
 
-}Triangle;
+typedef struct Poly
+{
+	Point *p0, *p1, *p2, *p3;
+	Vector normal;
+}Poly;
 
 typedef std::vector<Point> PointArr;
 typedef std::vector<PointArr> PointTable;
+typedef std::vector<Poly> PolyArr;
 
 class Cone {
 public:
 	Cone(GLdouble height, GLdouble radius, Point bottomc, GLint lat, GLint lon);
 	~Cone();
 	void draw();
+	void Normal();
 	void PolyConstruct(GLint ilat, GLint ilon);
 	void setHeight(GLdouble);
 	void setRadius(GLdouble);
@@ -78,8 +90,8 @@ private:
 	GLdouble height, radius;
 	PointTable Vertexes;
 	Point peak;
-	Edge *Edges;
-	Point *CapVertexes;
+	PolyArr Polygons;
+	PointTable CapVertexes;
 };
 
 class Light {
@@ -178,31 +190,32 @@ static void keyboard_callback(GLFWwindow* window, int key, int scancode, int act
 		turnf(A * 2, C, 0.5, -M_PI / 4, 0, 0, SPEED);
 		//movef(0,0,-SPEED);
 	}
-	if ((key == GLFW_KEY_KP_8) && (action == GLFW_PRESS))
+	if ((key == GLFW_KEY_W) && (action == GLFW_PRESS))
 	{
 		kenny.PolyConstruct(kenny.lat + 1, kenny.lon);
 		printf("lat:\t%d\nlon:\t%d\n", kenny.lat, kenny.lon);
 	}
-	if ((key == GLFW_KEY_KP_2) && (action == GLFW_PRESS))
+	if ((key == GLFW_KEY_S) && (action == GLFW_PRESS))
 	{
 		kenny.PolyConstruct(kenny.lat - 1, kenny.lon);
 		printf("lat:\t%d\nlon:\t%d\n", kenny.lat, kenny.lon);
 	}
-	if ((key == GLFW_KEY_KP_6) && (action == GLFW_PRESS))
+	if ((key == GLFW_KEY_D) && (action == GLFW_PRESS))
 	{
 		kenny.PolyConstruct(kenny.lat, kenny.lon + 1);
 		printf("lat:\t%d\nlon:\t%d\n", kenny.lat, kenny.lon);
 	}
-	if ((key == GLFW_KEY_KP_4) && (action == GLFW_PRESS))
+	if ((key == GLFW_KEY_A) && (action == GLFW_PRESS))
 	{
 		kenny.PolyConstruct(kenny.lat, kenny.lon - 1);
 		printf("lat:\t%d\nlon:\t%d\n", kenny.lat, kenny.lon);
 	}
-	if ((key == GLFW_KEY_KP_5) && (action == GLFW_PRESS))
+	if ((key == GLFW_KEY_L) && (action == GLFW_PRESS))
 	{
 		if (!l0.e)
 		{
 			l0.e = 1;
+			//kenny.Normal();
 			glEnable(GL_LIGHTING);
 			glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 			glEnable(GL_LIGHT0);
@@ -240,12 +253,13 @@ void draw()
 
 PointTable initVertexes(int lat, int lon)
 {
-	PointTable table(lat);
-	int i;
-	for (i = 0; i < lat; i++)
-	{
-		s
-	}
+	PointTable table;
+	PointArr dummy;
+	Point dummypoint = { 0, 0, 0, { 0, 0, 0 } };
+	int i,j;
+	for (i = 0; i < lon; i++) dummy.push_back(dummypoint);
+	for (i = 0; i < lat; i++) table.push_back(dummy);
+	return table;
 }
 
 int main(int argc, _TCHAR* argv[])
@@ -314,8 +328,20 @@ Cone::Cone(GLdouble height, GLdouble radius, Point bottomc, GLint ilat, GLint il
 	else lat = 3;
 	if (ilon >= 3) lon = ilon;
 	else lon = 3;
-	this->Vertexes = NULL;
 	PolyConstruct(lat, lon);
+}
+
+//lat - кол-во горизонтальных линий, БЕЗ ВЕРШИНЫ!!!
+void Cone::Normal()
+{
+	int i, j;
+	Vector v1, v2;
+	for (i = 0; i < Polygons.size(); i++)
+	{
+		v1 = { (*(Polygons[i].p1) - *(Polygons[i].p0)).x, (*(Polygons[i].p1) - *(Polygons[i].p0)).y, (*(Polygons[i].p1) - *(Polygons[i].p0)).z };
+		v2 = { (*(Polygons[i].p3) - *(Polygons[i].p0)).x, (*(Polygons[i].p3) - *(Polygons[i].p0)).y, (*(Polygons[i].p3) - *(Polygons[i].p0)).z };
+		Polygons[i].normal = {v1.y*v2.z - v2.y*v1.z, v2.x*v1.z - v1.x*v2.z, v1.x*v2.y - v1.y*v2.x};
+	}
 }
 
 void Cone::PolyConstruct(GLint ilat, GLint ilon)
@@ -327,57 +353,71 @@ void Cone::PolyConstruct(GLint ilat, GLint ilon)
 	else lat = 2;
 	if (ilon >= 3) lon = ilon;
 	else lon = 3;
+	int dbg3 = Vertexes.size();
 	if (Vertexes.size()>0)
 	{
-		for (i = 0; i < lat; i++) Vertexes[i].clear();
+		for (i = 0; i < Vertexes.size(); i++) Vertexes[i].clear();
+	}
+	if (CapVertexes.size()>0)
+	{
+		for (i = 0; i < CapVertexes.size(); i++)
+		{
+			CapVertexes[i].clear();
+		}
+	}
+	if (Polygons.size()>0)
+	{
+		Polygons.clear();
 	}
 	Vertexes=initVertexes(lat,lon);
-	for (i = 0; i < lat - 1; i++)
+	CapVertexes = initVertexes(lat, lon);
+	int dbg1 = Vertexes.size();
+	int dbg2 = Vertexes[0].size();
+	for (i = 0; i < lat; i++)
 	{
 		rad = radius - (i*radius) / lat;
+		for (j = 0; j < lon; j++)
+		{
+			da = (j*PI * 2) / ((GLdouble)lon);
+			Vertexes[i][j].x = cx + rad*cos(da);
+			Vertexes[i][j].y = cy + i*height / lat;
+			Vertexes[i][j].z = cz + rad*sin(da);
+			Vertexes[i][j].RGB[0] = 0, Vertexes[i][j].RGB[1] = 1, Vertexes[i][j].RGB[2] = 1 ;
+			//bottom
+			CapVertexes[i][j].x = Vertexes[i][j].x;
+			CapVertexes[i][j].z = Vertexes[i][j].z;
+			CapVertexes[i][j].y = BottomCentre.y;
+			CapVertexes[i][j].RGB[0] = 0, CapVertexes[i][j].RGB[1] = 1, CapVertexes[i][j].RGB[2] = 1;
+		}				
 	}
+	//cap
+	peak.x = cx;
+	peak.y = cy + height;
+	peak.z = cz;
+	peak.RGB[0] = 0, peak.RGB[1] = 1, peak.RGB[2] = 1;
 
-	//if (Edges != NULL) delete[] Edges;
-	//if (Vertexes != NULL) delete[] Vertexes;
-	//if (CapVertexes != NULL) delete[] CapVertexes;
-	//this->Edges = new Edge[4 * lon*(lat - 1)-lon];
-	//this->Vertexes = new Point[(lat - 1)*lon + 1];
-	//this->CapVertexes = (lat >= 3) ? new Point[(lat - 2)*lon] : NULL;
-	////side
-	//for (j = 0; j<lat - 1; j++)
-	//{
-	//	rad = this->radius - (j*this->radius) / lat;
-	//	for (i = 0, a = 0; i<lon; i++, a++)
-	//	{
-	//		da = (i*PI * 2) / ((GLdouble)lon);
-	//		Vertexes[j*lon + i].x = cx + rad*cos(da);
-	//		Vertexes[j*lon + i].y = cy + j*height / lat;
-	//		Vertexes[j*lon + i].z = cz + rad*sin(da);
-	//		Vertexes[j*lon + i].RGB[0] = 0, Vertexes[j*lon + i].RGB[1] = 1, Vertexes[j*lon + i].RGB[2] = 1;
-	//		//B3W4RE 0F 1D107Z!!!
-	//		if ((CapVertexes != NULL) && (j>0) && (j < lat - 1))
-	//			CapVertexes[(j - 1)*lon + i].x = Vertexes[j*lon + i].x,
-	//			CapVertexes[(j - 1)*lon + i].z = Vertexes[j*lon + i].z,
-	//			CapVertexes[(j - 1)*lon + i].y = BottomCentre.y,
-	//			CapVertexes[(j - 1)*lon + i].RGB[0] = 0,
-	//			CapVertexes[(j - 1)*lon + i].RGB[1] = CapVertexes[(j - 1)*lon + i].RGB[2] = 1;
-
-	//	}
-
-	//}
-	////cap
-	//Vertexes[(lat - 1)*lon].x = cx;
-	//Vertexes[(lat - 1)*lon].y = cy + height;
-	//Vertexes[(lat - 1)*lon].z = cz;
-	//Vertexes[(lat - 1)*lon].RGB[0] = 0, Vertexes[(lat - 1)*lon].RGB[1] = 1, Vertexes[(lat - 1)*lon].RGB[2] = 1;
-	////bottom
-
-
+	for (i = 0; i < lat - 1; i++)
+	for (j = 0; j < lon; j++)
+	{
+		Polygons.push_back({ &(Vertexes[i][j]), &(Vertexes[i + 1][j]), &(Vertexes[i + 1][(j + 1) % lon]), &(Vertexes[i][(j + 1) % lon])});
+		Polygons.push_back({ &(CapVertexes[i][j]), &(CapVertexes[i + 1][j]), &(CapVertexes[i + 1][(j + 1) % lon]), &(CapVertexes[i][(j + 1) % lon]) });
+	}
+	for (i = 0; i < lon; i++)
+	{
+		Point dbg1 = Vertexes[lat - 1][i],
+			dbg2 = peak,
+			dbg3 = Vertexes[lat - 1][(i + 1) % lon];
+		Polygons.push_back({ &(Vertexes[lat - 1][i]), &(peak), NULL, &(Vertexes[lat - 1][(i + 1) % lon]) });
+		Polygons.push_back({ &(Vertexes[0][i]), &(BottomCentre), NULL, &(Vertexes[0][(i + 1) % lon]) });
+	}
+	//Normal();
 }
 
 Cone::~Cone() {
+	int i;
 	printf("They killed Kenny!\n");
-	delete this->Vertexes;
+	for (i = 0; i < lat - 1; i++)
+		Vertexes[i].clear();
 }
 
 
@@ -395,84 +435,39 @@ void Cone::draw()
 {
 	int i, j;
 	GLdouble cx = BottomCentre.x,
-		cy = BottomCentre.y,
-		cz = BottomCentre.z;
+			 cy = BottomCentre.y,
+			 cz = BottomCentre.z;
 	glPolygonMode(GL_FRONT_AND_BACK, pMode);
-	for (j = 0; j<lat - 2; j++)
+	if (l0.e == 1 && Polygons.size()>0) kenny.Normal();
+	for (i = 0; i < Polygons.size(); i++)
 	{
-		//side
-		glBegin(GL_QUAD_STRIP);
-		for (i = 0; i <= lon; i++)
+		if (Polygons[i].p2 != NULL)
 		{
-			glColor3dv(Vertexes[j*lon + i%lon].RGB);
-			glVertex3d(Vertexes[j*lon + i%lon].x, Vertexes[j*lon + i%lon].y, Vertexes[j*lon + i%lon].z);
-			glColor3dv(Vertexes[(j + 1)*lon + i%lon].RGB);
-			glVertex3d(Vertexes[(j + 1)*lon + i%lon].x, Vertexes[(j + 1)*lon + i%lon].y, Vertexes[(j + 1)*lon + i%lon].z);
+			glBegin(GL_QUADS);
+			if (l0.e == 1 && Polygons.size()>0)
+				glNormal3d(-Polygons[i].normal.x, -Polygons[i].normal.y, -Polygons[i].normal.z);
+				glColor3dv(Polygons[i].p0->RGB);
+				glVertex3d(Polygons[i].p0->x, Polygons[i].p0->y, Polygons[i].p0->z);
+				glColor3dv(Polygons[i].p1->RGB);
+				glVertex3d(Polygons[i].p1->x, Polygons[i].p1->y, Polygons[i].p1->z);
+				glColor3dv(Polygons[i].p2->RGB);
+				glVertex3d(Polygons[i].p2->x, Polygons[i].p2->y, Polygons[i].p2->z);
+				glColor3dv(Polygons[i].p3->RGB);
+				glVertex3d(Polygons[i].p3->x, Polygons[i].p3->y, Polygons[i].p3->z);
+			glEnd();
 		}
-
-		glEnd();
+		else
+		{
+			glBegin(GL_TRIANGLES);
+			glColor3dv(Polygons[i].p0->RGB);
+			glVertex3d(Polygons[i].p0->x, Polygons[i].p0->y, Polygons[i].p0->z);
+			glColor3dv(Polygons[i].p1->RGB);
+			glVertex3d(Polygons[i].p1->x, Polygons[i].p1->y, Polygons[i].p1->z);
+			glColor3dv(Polygons[i].p3->RGB);
+			glVertex3d(Polygons[i].p3->x, Polygons[i].p3->y, Polygons[i].p3->z);
+			glEnd();
+		}
 	}
-	//cap
-	glBegin(GL_TRIANGLE_FAN);
-	glColor3dv(Vertexes[(lat - 1)*lon].RGB);
-	glVertex3d(Vertexes[(lat - 1)*lon].x, Vertexes[(lat - 1)*lon].y, Vertexes[(lat - 1)*lon].z);
-	for (i = (lat - 1)*lon - lon; i<(lat - 1)*lon; i++)
-	{
-		glColor3dv(Vertexes[i].RGB);
-		glVertex3d(Vertexes[i].x, Vertexes[i].y, Vertexes[i].z);
-	}
-	glColor3dv(Vertexes[(lat - 1)*lon - lon].RGB);
-	glVertex3d(Vertexes[(lat - 1)*lon - lon].x, Vertexes[(lat - 1)*lon - lon].y, Vertexes[(lat - 1)*lon - lon].z);
-	glEnd();
-	//bottom1
-	if (CapVertexes != NULL)
-	{
-		glBegin(GL_QUAD_STRIP);
-		for (i = 0; i <= lon; i++)
-		{
-			glColor3dv(Vertexes[i%lon].RGB);
-			glVertex3d(Vertexes[i%lon].x, Vertexes[i%lon].y, Vertexes[i%lon].z);
-			glColor3dv(CapVertexes[i%lon].RGB);
-			glVertex3d(CapVertexes[i%lon].x, CapVertexes[i%lon].y, CapVertexes[i%lon].z);
-		}
-
-		for (i = 0; i < lat - 3; i++)
-		for (j = 0; j <= lon; j++)
-		{
-			glColor3dv(CapVertexes[i*lon + j%lon].RGB);
-			glVertex3d(CapVertexes[i*lon + j%lon].x, CapVertexes[i*lon + j%lon].y, CapVertexes[i*lon + j%lon].z);
-			glColor3dv(CapVertexes[(i + 1)*lon + j%lon].RGB);
-			glVertex3d(CapVertexes[(i + 1)*lon + j%lon].x, CapVertexes[(i + 1)*lon + j%lon].y, CapVertexes[(i + 1)*lon + j%lon].z);
-		}
-
-		glEnd();
-
-		glBegin(GL_TRIANGLE_FAN);
-		glColor3dv(BottomCentre.RGB);
-		glVertex3d(BottomCentre.x, BottomCentre.y, BottomCentre.z);
-		for (i = (lat - 3)*lon; i < (lat - 2)*lon; i++)
-		{
-			glColor3dv(CapVertexes[i].RGB);
-			glVertex3d(CapVertexes[i].x, CapVertexes[i].y, CapVertexes[i].z);
-		}
-		glEnd();
-	}
-	//bottom2
-	else
-	{
-		glBegin(GL_TRIANGLE_FAN);
-		glColor3d(0, 1, 1);
-		glVertex3d(BottomCentre.x, BottomCentre.y, BottomCentre.z);
-		for (i = 0; i < lon; i++)
-		{
-			glColor3dv(Vertexes[i].RGB);
-			glVertex3d(Vertexes[i].x, Vertexes[i].y, Vertexes[i].z);
-		}
-		glColor3dv(Vertexes[0].RGB);
-		glVertex3d(Vertexes[0].x, Vertexes[0].y, Vertexes[0].z);
-		glEnd();
-	}
-
 }
 
 void Cone::setHeight(GLdouble h)
