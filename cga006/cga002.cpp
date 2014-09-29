@@ -42,13 +42,11 @@ sd0[3] = { 0, 0, -1 },
 c0 = M_PI,
 e0 = 0, kc = 0.01, kl = 0, kq = 0.0;
 
-
-typedef struct GLdoublePoint
+typedef struct Point
 {
 	GLdouble	x;
 	GLdouble	y;
 	GLdouble	z;
-	GLdouble	normal[3];
 	GLdouble	RGB[3];
 } GLdoublePoint;
 
@@ -57,9 +55,17 @@ typedef struct Edge
 	GLdoublePoint v1, v2;
 }Edge;
 
+typedef struct Triangle
+{
+
+}Triangle;
+
+typedef std::vector<Point> PointArr;
+typedef std::vector<PointArr> PointTable;
+
 class Cone {
 public:
-	Cone(GLdouble height, GLdouble radius, GLdoublePoint bottomc, GLint lat, GLint lon);
+	Cone(GLdouble height, GLdouble radius, Point bottomc, GLint lat, GLint lon);
 	~Cone();
 	void draw();
 	void PolyConstruct(GLint ilat, GLint ilon);
@@ -68,11 +74,12 @@ public:
 	void resize(GLdouble bcx, GLdouble bcy);
 	GLint lat, lon;
 private:
-	GLdoublePoint BottomCentre;
+	Point BottomCentre;
 	GLdouble height, radius;
-	GLdoublePoint *Vertexes;
+	PointTable Vertexes;
+	Point peak;
 	Edge *Edges;
-	GLdoublePoint *CapVertexes;
+	Point *CapVertexes;
 };
 
 class Light {
@@ -96,7 +103,7 @@ public:
 	void Enable();
 };
 
-GLdoublePoint cC = { A * 2, C, 0.0, { 0, 0, 0 } }, cC2 = { A / 4, C / 2, 0.5, { 0, 0, 0 } };
+Point cC = { A * 2, C, 0.0, { 0, 0, 0 } }, cC2 = { A / 4, C / 2, 0.5, { 0, 0, 0 } };
 Cone kenny(C / 2, A / 2, cC, LAT, LON);
 Light l0(lcolr0,n0,pos0,a0,d0,s0,sd0,0,M_PI,1,1,1);
 
@@ -231,6 +238,16 @@ void draw()
 
 }
 
+PointTable initVertexes(int lat, int lon)
+{
+	PointTable table(lat);
+	int i;
+	for (i = 0; i < lat; i++)
+	{
+		s
+	}
+}
+
 int main(int argc, _TCHAR* argv[])
 {
 	// initialise GLFW
@@ -288,7 +305,7 @@ int main(int argc, _TCHAR* argv[])
 	return 0;
 }
 //===========================CONE==============================
-Cone::Cone(GLdouble height, GLdouble radius, GLdoublePoint bottomc, GLint ilat, GLint ilon)
+Cone::Cone(GLdouble height, GLdouble radius, Point bottomc, GLint ilat, GLint ilon)
 {
 	this->height = height;
 	this->radius = radius;
@@ -310,40 +327,50 @@ void Cone::PolyConstruct(GLint ilat, GLint ilon)
 	else lat = 2;
 	if (ilon >= 3) lon = ilon;
 	else lon = 3;
-	if (Edges != NULL) delete[] Edges;
-	if (Vertexes != NULL) delete[] Vertexes;
-	if (CapVertexes != NULL) delete[] CapVertexes;
-	this->Edges = new Edge[4 * lon*(lat - 1)-lon];
-	this->Vertexes = new GLdoublePoint[(lat - 1)*lon + 1];
-	this->CapVertexes = (lat >= 3) ? new GLdoublePoint[(lat - 2)*lon] : NULL;
-	//side
-	for (j = 0; j<lat - 1; j++)
+	if (Vertexes.size()>0)
 	{
-		rad = this->radius - (j*this->radius) / lat;
-		for (i = 0, a = 0; i<lon; i++, a++)
-		{
-			da = (i*PI * 2) / ((GLdouble)lon);
-			Vertexes[j*lon + i].x = cx + rad*cos(da);
-			Vertexes[j*lon + i].y = cy + j*height / lat;
-			Vertexes[j*lon + i].z = cz + rad*sin(da);
-			Vertexes[j*lon + i].RGB[0] = 0, Vertexes[j*lon + i].RGB[1] = 1, Vertexes[j*lon + i].RGB[2] = 1;
-			//B3W4RE 0F 1D107Z!!!
-			if ((CapVertexes != NULL) && (j>0) && (j < lat - 1))
-				CapVertexes[(j - 1)*lon + i].x = Vertexes[j*lon + i].x,
-				CapVertexes[(j - 1)*lon + i].z = Vertexes[j*lon + i].z,
-				CapVertexes[(j - 1)*lon + i].y = BottomCentre.y,
-				CapVertexes[(j - 1)*lon + i].RGB[0] = 0,
-				CapVertexes[(j - 1)*lon + i].RGB[1] = CapVertexes[(j - 1)*lon + i].RGB[2] = 1;
-
-		}
-
+		for (i = 0; i < lat; i++) Vertexes[i].clear();
 	}
-	//cap
-	Vertexes[(lat - 1)*lon].x = cx;
-	Vertexes[(lat - 1)*lon].y = cy + height;
-	Vertexes[(lat - 1)*lon].z = cz;
-	Vertexes[(lat - 1)*lon].RGB[0] = 0, Vertexes[(lat - 1)*lon].RGB[1] = 1, Vertexes[(lat - 1)*lon].RGB[2] = 1;
-	//bottom
+	Vertexes=initVertexes(lat,lon);
+	for (i = 0; i < lat - 1; i++)
+	{
+		rad = radius - (i*radius) / lat;
+	}
+
+	//if (Edges != NULL) delete[] Edges;
+	//if (Vertexes != NULL) delete[] Vertexes;
+	//if (CapVertexes != NULL) delete[] CapVertexes;
+	//this->Edges = new Edge[4 * lon*(lat - 1)-lon];
+	//this->Vertexes = new Point[(lat - 1)*lon + 1];
+	//this->CapVertexes = (lat >= 3) ? new Point[(lat - 2)*lon] : NULL;
+	////side
+	//for (j = 0; j<lat - 1; j++)
+	//{
+	//	rad = this->radius - (j*this->radius) / lat;
+	//	for (i = 0, a = 0; i<lon; i++, a++)
+	//	{
+	//		da = (i*PI * 2) / ((GLdouble)lon);
+	//		Vertexes[j*lon + i].x = cx + rad*cos(da);
+	//		Vertexes[j*lon + i].y = cy + j*height / lat;
+	//		Vertexes[j*lon + i].z = cz + rad*sin(da);
+	//		Vertexes[j*lon + i].RGB[0] = 0, Vertexes[j*lon + i].RGB[1] = 1, Vertexes[j*lon + i].RGB[2] = 1;
+	//		//B3W4RE 0F 1D107Z!!!
+	//		if ((CapVertexes != NULL) && (j>0) && (j < lat - 1))
+	//			CapVertexes[(j - 1)*lon + i].x = Vertexes[j*lon + i].x,
+	//			CapVertexes[(j - 1)*lon + i].z = Vertexes[j*lon + i].z,
+	//			CapVertexes[(j - 1)*lon + i].y = BottomCentre.y,
+	//			CapVertexes[(j - 1)*lon + i].RGB[0] = 0,
+	//			CapVertexes[(j - 1)*lon + i].RGB[1] = CapVertexes[(j - 1)*lon + i].RGB[2] = 1;
+
+	//	}
+
+	//}
+	////cap
+	//Vertexes[(lat - 1)*lon].x = cx;
+	//Vertexes[(lat - 1)*lon].y = cy + height;
+	//Vertexes[(lat - 1)*lon].z = cz;
+	//Vertexes[(lat - 1)*lon].RGB[0] = 0, Vertexes[(lat - 1)*lon].RGB[1] = 1, Vertexes[(lat - 1)*lon].RGB[2] = 1;
+	////bottom
 
 
 }
