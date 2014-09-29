@@ -3,7 +3,6 @@
 //Метод повышения реалистичности: влияние параметров (компонентов модели освещения) источника света
 //Анимация: твининг-анимация, линейная
 //Использование текстуры: использование текстуры для определения интенсивности поверхности
-//Сделать вычисление нормалей в точках сетки (метод усреднения)
 //Перед каждым вызовом glVertex делаем glNormal и glTex
 //  http://www.glfw.org/docs/latest/quick.html
 #define _USE_MATH_DEFINES
@@ -15,6 +14,7 @@
 #include "stdafx.h"
 #include <vector>
 #include <time.h>
+#include <glut.h>
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
@@ -34,13 +34,13 @@ GLfloat emis[4] = { 1, 1, 1, 1 };
 GLfloat shine[1] = { 63 };
 GLfloat lcolr0[3] = { 0, 0, 1 },
 n0[3] = { 1, 1, 0 },
-pos0[4] = { 10, 10, 10, 0 },
-a0[4] = { 0, 0, 0, 1 },
-d0[4] = { 1, 1, 1, 1 },
-s0[4] = { 1, 1, 1, 1 },
+pos0[4] = { 0, -1, 0, 1 },
+a0[4] = { 0.2, 0.2, 0.2, 1 },
+d0[4] = { 0.9, 0.9, 0.9, 1 },
+s0[4] = { 0.4, 0.4, 0.4, 1 },
 sd0[3] = { 0, 0, -1 },
-c0 = M_PI,
-e0 = 0, kc = 0.5, kl = 0.5, kq = 0.5;
+c0 = M_PI / 2;
+
 
 typedef struct Point
 {
@@ -97,27 +97,24 @@ private:
 class Light {
 public:
 	GLfloat *RGB,
-	*normal,
-	*position,
-	*amb,
-	*diff,
-	*spec,
-	*spdir,
-	exp, cutoff, kc, kl, kq;
+		*position,
+		*amb,
+		*diff,
+		*spec;
 
 	char e = 0;
 	
-	Light(GLfloat *color, GLfloat *n, GLfloat *pos, GLfloat *a, GLfloat *d, GLfloat *s, GLfloat *sdir,
-		GLfloat e, GLfloat coff, GLfloat k_c, GLfloat k_l, GLfloat k_q);
+	Light(GLfloat *color,GLfloat *pos, GLfloat *a, GLfloat *d, GLfloat *s);
 	void SetColor(GLfloat *color);
-	void SetGeom(GLfloat *n, GLfloat *pos, GLfloat *sdir, GLfloat e, GLfloat coff);
-	void SetLightConf(GLfloat *a, GLfloat *d, GLfloat *s, GLfloat k_c, GLfloat k_l, GLfloat k_q);
+	void SetGeom(GLfloat *pos);
+	void SetLightConf(GLfloat *a, GLfloat *d, GLfloat *s);
 	void Enable();
+	void Disable();
 };
 
 Point cC = { A * 2, C, 0.0, { 0, 0, 0 } }, cC2 = { A / 4, C / 2, 0.5, { 0, 0, 0 } };
 Cone kenny(C / 2, A / 2, cC, LAT, LON);
-Light l0(lcolr0,n0,pos0,a0,d0,s0,sd0,0,M_PI,1,1,1);
+Light l0(lcolr0,pos0,a0,d0,s0);
 
 static void turnf(GLfloat tr_x, GLfloat tr_y, GLfloat tr_z, GLfloat angle, GLfloat rot_x, GLfloat rot_y, GLfloat rot_z)
 {
@@ -220,9 +217,7 @@ static void keyboard_callback(GLFWwindow* window, int key, int scancode, int act
 		}
 		else {
 			l0.e = 0;
-			glDisable(GL_NORMALIZE);
-			glDisable(GL_LIGHTING);
-			glDisable(GL_LIGHT0);
+			l0.Disable();
 			
 		}
 	}
@@ -248,7 +243,7 @@ void draw()
 	glLoadIdentity();
 	glPopMatrix();
 	kenny.draw();
-
+	
 }
 
 PointTable initVertexes(int lat, int lon)
@@ -480,51 +475,39 @@ void Cone::setRadius(GLdouble r)
 	this->radius = r;
 }
 //=============================================================
-Light::Light(GLfloat *color, GLfloat *n, GLfloat *pos, GLfloat *a, GLfloat *d, GLfloat *s, GLfloat *sdir,
-	GLfloat e, GLfloat coff, GLfloat k_c, GLfloat k_l, GLfloat k_q) {
+Light::Light(GLfloat *color,GLfloat *pos, GLfloat *a, GLfloat *d, GLfloat *s) {
 	RGB = color;
-
-	normal = n;
 	position = pos;
-	spdir = sdir;
-	cutoff = coff;
-	exp = e;
-
 	amb = a;
 	diff = d;
 	spec = s;
-	kc = k_c;
-	kl = k_l;
-	kq = k_q;
 }
 
 void Light::SetColor(GLfloat *color) {
 	RGB = color;
 }
 
-void Light::SetGeom(GLfloat *n, GLfloat *pos, GLfloat *sdir, GLfloat e, GLfloat coff) {
-	normal = n;
+void Light::SetGeom(GLfloat *pos) {
 	position = pos;
-	spdir = sdir;
-	cutoff = coff;
-	exp = e;
 }
 
-void Light::SetLightConf(GLfloat *a, GLfloat *d, GLfloat *s, GLfloat k_c, GLfloat k_l, GLfloat k_q) {
+void Light::SetLightConf(GLfloat *a, GLfloat *d, GLfloat *s) {
 	amb = a;
 	diff = d;
 	spec = s;
-	kc = k_c;
-	kl = k_l;
-	kq = k_q;
 }
 
 void Light::Enable() {
+	float light_ambient[] = { 0.2, 0.2, 0.2, 1 };
+	float light_diffuse[] = { 0.9, 0.9, 0.9, 1 };
+	float light_specular[] = { 0.4, 0.4, 0.4, 1 };
+	float light_position[] = { 0, -1, 0, 1 };
 	glEnable(GL_NORMALIZE);
 	glEnable(GL_LIGHTING);
+	glEnable(GL_DEPTH_TEST);
 	glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
 
-	glLightModelfv(GL_AMBIENT, ascene);
+	//glLightModelfv(GL_AMBIENT, ascene);
 //	glColor3fv(RGB);
 	
 	glEnable(GL_LIGHT0);
@@ -533,14 +516,20 @@ void Light::Enable() {
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, diff);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, spec);
 	glLightfv(GL_LIGHT0, GL_POSITION, position);
-//	glLightfv(GL_LIGHT0, GL_CONSTANT_ATTENUATION, &kc);
-//	glLightfv(GL_LIGHT0, GL_LINEAR_ATTENUATION, &kl);
-//	glLightfv(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, &kq);
 
-	glMaterialfv(GL_FRONT, GL_AMBIENT, ma);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, md);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, ms);
+
+	//glMaterialfv(GL_FRONT, GL_AMBIENT, ma);
+//	glMaterialfv(GL_FRONT, GL_DIFFUSE, md);
+//	glMaterialfv(GL_FRONT, GL_SPECULAR, ms);
 //	glMaterialfv(GL_FRONT, GL_SHININESS, shine);
-	glLightfv(GL_LIGHT0, GL_SPOT_CUTOFF, &cutoff);
+	//glLightfv(GL_LIGHT0, GL_SPOT_CUTOFF, &cutoff);
 	
+}
+
+void Light::Disable()
+{
+	glDisable(GL_NORMALIZE);
+	glDisable(GL_LIGHTING);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_LIGHT0);
 }
