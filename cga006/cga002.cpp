@@ -23,7 +23,7 @@ GLfloat PI = M_PI;
 GLfloat A = SCREEN_WIDTH / 4.0, B = 0.0, C = SCREEN_HEIGHT / 2.0, D = C;
 GLfloat orth[16] = { 1, 0, 0, 0, 0, 1, 0, 0, -cos(PROJ_ANGLE), -sin(PROJ_ANGLE), 1, 0, 0, 0, 0, 1 };
 GLfloat SPEED = 1, ANGLE = M_PI / 2, t = 0;
-GLint LAT = 3, LON = 8, pMode = GL_LINE,move,use_texture=0;
+GLint LAT = 3, LON = 8, pMode = GL_LINE,move,use_texture=0,light=0;
 GLfloat cyan[3] = { 0, 1, 1 };
 GLfloat black[3] = { 0, 0, 0 };
 GLfloat lcolr0[3] = { 0, 0, 1 },
@@ -33,8 +33,11 @@ d0[4] = { 0.9, 0.9, 0.9, 1 },
 s0[4] = { 0.4, 0.4, 0.4, 1 },
 sd0[3] = { 0, 0, -1 },
 c0 = M_PI / 2;
+
 unsigned int Texture;
 void TextureInit();
+void SaveScene();
+void LoadScene();
 
 typedef struct Point
 {
@@ -81,7 +84,6 @@ public:
 	void setBCCoords(GLfloat,GLfloat,GLfloat);
 	void setPCoords(GLfloat, GLfloat, GLfloat);
 	GLint lat, lon;
-private:
 	Point BottomCentre;
 	GLdouble height, radius;
 	PointTable Vertexes;
@@ -208,7 +210,6 @@ static void keyboard_callback(GLFWwindow* window, int key, int scancode, int act
 		if (!l0.e)
 		{
 			l0.e = 1;
-			//kenny.Normal();
 			l0.Enable();
 		}
 		else {
@@ -234,6 +235,58 @@ static void keyboard_callback(GLFWwindow* window, int key, int scancode, int act
 			use_texture = 1;
 		}
 	}
+	if ((key == GLFW_KEY_Q) && (action == GLFW_PRESS))
+	{
+		SaveScene();
+	}
+	if ((key == GLFW_KEY_E) && (action == GLFW_PRESS))
+	{
+		LoadScene();
+	}
+	if ((key == GLFW_KEY_1) && (action == GLFW_PRESS))
+	{
+		float k;
+		printf("Ambient:\n");
+		scanf_s("%f", &k);
+		k = abs(k);
+		a0[0] = k, a0[1] = k, a0[2] = k, a0[3] = 1;
+		l0.SetLightConf(a0, d0, s0);
+		l0.Disable();
+		l0.Enable();
+	}
+	if ((key == GLFW_KEY_2) && (action == GLFW_PRESS))
+	{
+		float k;
+		printf("Diffuse:\n");
+		scanf_s("%f", &k);
+		k = abs(k);
+		d0[0] = k, d0[1] = k, d0[2] = k, d0[3] = 1;
+		l0.SetLightConf(a0, d0, s0);
+		l0.Disable();
+		l0.Enable();
+	}
+	if ((key == GLFW_KEY_3) && (action == GLFW_PRESS))
+	{
+		float k;
+		printf("Specular:\n");
+		scanf_s("%f", &k);
+		k = abs(k);
+		s0[0] = k, s0[1] = k, s0[2] = k, s0[3] = 1;
+		l0.SetLightConf(a0, d0, s0);
+		l0.Disable();
+		l0.Enable();
+	}
+	if ((key == GLFW_KEY_4) && (action == GLFW_PRESS))
+	{
+		float k;
+		printf("Position:\n");
+		scanf_s("%f", &k);
+		k = abs(k);
+		pos0[0] = k, pos0[1] = k, pos0[2] = k, pos0[3] = 1;
+		l0.SetGeom(pos0);
+		l0.Disable();
+		l0.Enable();
+	}
 }
 
 static void error_callback(int error, const char* description)
@@ -244,7 +297,11 @@ static void error_callback(int error, const char* description)
 void TextureInit()
 {
 	FILE* img;
+	int offset;
 	img = fopen("texture2.bmp", "rb");
+	fseek(img, 0x0a, SEEK_SET); //смещение поля OffBits, указывающее на начало массива пиксельных данных
+	fread(&offset, 4, 1, img);
+	fseek(img, (long)offset, SEEK_SET);
 	unsigned char *data = new unsigned char[786486];
 	fread(data, 786486, 1, img);
 	fclose(img);
@@ -253,10 +310,11 @@ void TextureInit()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, 512, 512, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	delete data;
 }
-
+//пропустить заголовок
+//выполнить изменение параметров света
 void draw()
 {
 	GLfloat side = (A<C ? A : C) / 2;
@@ -264,13 +322,47 @@ void draw()
 	kenny.resize(A * 2, C);
 	if (move)
 	{
-	
+	/*	if ((t>0) && (t < 200))
+		{
+			kenny.setHeight((1-t))
+		}*/
 	}
 	glPushMatrix();
 	glLoadIdentity();
 	glPopMatrix();
 	kenny.draw();
 	
+}
+
+void SaveScene()
+{
+	FILE *file;
+	file = fopen("save.txt", "w");
+	fprintf(file, "%d\t%d\t%d\t%d\n", pMode, use_texture, light, move);
+	fprintf(file, "%f\t%f\t%f\t%f\n", a0[0], a0[1], a0[2], a0[3]);
+	fprintf(file, "%f\t%f\t%f\t%f\n", d0[0], d0[1], d0[2], d0[3]);
+	fprintf(file, "%f\t%f\t%f\t%f\n", s0[0], s0[1], s0[2], s0[3]);
+	fprintf(file, "%f\t%f\t%f\t%f\n", pos0[0], pos0[1], pos0[2], pos0[3]);
+
+	fprintf(file, "%f\t%f\t%f\n", kenny.peak.x, kenny.peak.y, kenny.peak.z);
+	fprintf(file, "%f\t%f\t%f\n", kenny.BottomCentre.x, kenny.BottomCentre.y, kenny.BottomCentre.z);
+	fprintf(file, "%d\t%d\t%d\t%d\n", kenny.lat,kenny.lon,kenny.radius,kenny.height);
+	fclose(file);
+}
+void LoadScene()
+{
+	FILE *file;
+	file = fopen("save.txt", "r");
+	fprintf(file, "%d\t%d\t%d\t%d\n", &pMode, &use_texture, &light, &move);
+	fprintf(file, "%f\t%f\t%f\t%f\n", &a0[0], &a0[1], &a0[2], &a0[3]);
+	fprintf(file, "%f\t%f\t%f\t%f\n", &d0[0], &d0[1], &d0[2], &d0[3]);
+	fprintf(file, "%f\t%f\t%f\t%f\n", &s0[0], &s0[1], &s0[2], &s0[3]);
+	fprintf(file, "%f\t%f\t%f\t%f\n", &pos0[0], &pos0[1], &pos0[2], &pos0[3]);
+
+	fprintf(file, "%f\t%f\t%f\n", &(kenny.peak.x), &(kenny.peak.y), &(kenny.peak.z));
+	fprintf(file, "%f\t%f\t%f\n", &(kenny.BottomCentre.x), &(kenny.BottomCentre.y), &(kenny.BottomCentre.z));
+	fprintf(file, "%d\t%d\t%d\t%d\n", &(kenny.lat), &(kenny.lon), &(kenny.radius), &(kenny.height));
+	fclose(file);
 }
 
 PointTable initVertexes(int lat, int lon)
@@ -553,6 +645,7 @@ void Light::Enable() {
 	float light_diffuse[] = { 0.9, 0.9, 0.9, 1 };
 	float light_specular[] = { 0.4, 0.4, 0.4, 1 };
 	float light_position[] = { 0, -1, 0, 1 };
+//	float ma[] = { 0.3, 0.3, 0.3, 1 };
 	glEnable(GL_NORMALIZE);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);
@@ -569,10 +662,10 @@ void Light::Enable() {
 	glLightfv(GL_LIGHT0, GL_POSITION, position);
 
 
-	//glMaterialfv(GL_FRONT, GL_AMBIENT, ma);
-//	glMaterialfv(GL_FRONT, GL_DIFFUSE, md);
-//	glMaterialfv(GL_FRONT, GL_SPECULAR, ms);
-//	glMaterialfv(GL_FRONT, GL_SHININESS, shine);
+	/*glMaterialfv(GL_FRONT, GL_AMBIENT, amb);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, diff);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, spec);*/
+	//glMaterialfv(GL_FRONT, GL_SHININESS, shine);
 	//glLightfv(GL_LIGHT0, GL_SPOT_CUTOFF, &cutoff);
 	
 }
