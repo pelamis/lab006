@@ -8,6 +8,7 @@
 #define _USE_MATH_DEFINES
 #include "stdafx.h"
 #include "glew.h"
+#include <gl\GLU.h>
 #include "glfw3.h"
 #include "math.h"
 #include <random>
@@ -22,24 +23,18 @@ GLfloat PI = M_PI;
 GLfloat A = SCREEN_WIDTH / 4.0, B = 0.0, C = SCREEN_HEIGHT / 2.0, D = C;
 GLfloat orth[16] = { 1, 0, 0, 0, 0, 1, 0, 0, -cos(PROJ_ANGLE), -sin(PROJ_ANGLE), 1, 0, 0, 0, 0, 1 };
 GLfloat SPEED = 1, ANGLE = M_PI / 2, t = 0;
-GLint LAT = 3, LON = 8, pMode = GL_LINE,move,use_texture;
+GLint LAT = 3, LON = 8, pMode = GL_LINE,move,use_texture=0;
 GLfloat cyan[3] = { 0, 1, 1 };
 GLfloat black[3] = { 0, 0, 0 };
-GLfloat ascene[4] = { 0, 0.5, 0.5, 1 };
-GLfloat ma[4] = { 0.2, 0.5, 0.5, 1 };
-GLfloat md[4] = { 0.2, 0.2, 0.8, 1 };
-GLfloat ms[4] = { 1.0,1.0,1.0,1.0 };
-GLfloat emis[4] = { 1, 1, 1, 1 };
-GLfloat shine[1] = { 63 };
 GLfloat lcolr0[3] = { 0, 0, 1 },
-n0[3] = { 1, 1, 0 },
 pos0[4] = { 0, -1, 0, 1 },
 a0[4] = { 0.2, 0.2, 0.2, 1 },
 d0[4] = { 0.9, 0.9, 0.9, 1 },
 s0[4] = { 0.4, 0.4, 0.4, 1 },
 sd0[3] = { 0, 0, -1 },
 c0 = M_PI / 2;
-
+unsigned int Texture;
+void TextureInit();
 
 typedef struct Point
 {
@@ -234,7 +229,7 @@ static void keyboard_callback(GLFWwindow* window, int key, int scancode, int act
 			glDisable(GL_TEXTURE_2D);
 		}
 		else {
-			//TextureInit();
+			TextureInit();
 			glEnable(GL_TEXTURE_2D);
 			use_texture = 1;
 		}
@@ -246,11 +241,26 @@ static void error_callback(int error, const char* description)
 	fputs(description, stderr);
 }
 
+void TextureInit()
+{
+	FILE* img;
+	img = fopen("texture2.bmp", "rb");
+	unsigned char *data = new unsigned char[786486];
+	fread(data, 786486, 1, img);
+	fclose(img);
+	glGenTextures(1, &Texture);
+	glBindTexture(GL_TEXTURE_2D, Texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, 512, 512, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	delete data;
+}
+
 void draw()
 {
 	GLfloat side = (A<C ? A : C) / 2;
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//l0.Enable();
 	kenny.resize(A * 2, C);
 	if (move)
 	{
